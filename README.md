@@ -1,6 +1,8 @@
 # Taky Server Ansible role (Work in Progress)
 --- 
 
+## !! This Role is not fully tested so use with caution !!
+
 ### Requirements
   Only tested running ansible from OSX to Debian 12, but should work on Ubuntu also /shrug
   - Docker installed
@@ -8,8 +10,8 @@
 
 ### Setup
 
+Create hosts.yaml file with the following info
 ```yaml
-# Create hosts.yaml file with the following info
 ---
 all:
   hosts:
@@ -34,16 +36,17 @@ taky_servers:
 
 Create an `vars/vault.yaml` file to store / overwrite secrets
 ```yaml
-    secret:
-        acme_directory: https://acme-staging-v02.api.letsencrypt.org/directory
-        acme_certificate_domain: "{{ ansible_fqdn }}"
-        acme_contact: Change@me.mail
+---
+secret:
+  taky_certificate_key_pw: 
+  taky_certificate_p12_pw: atakatak
+  taky_server_redis_pass: 
 
-        cloudflare_dns_api_token: CF_DNS_TOKEN
-
-        taky_certificate_key_pw: 
-        taky_certificate_p12_pw: atakatak
-        taky_server_redis_pass: 
+  # Not need now, since we don't use let's encrypt for certs
+  # acme_directory: https://acme-staging-v02.api.letsencrypt.org/directory
+  # acme_certificate_domain: "{{ ansible_fqdn }}"
+  # acme_contact: Change@me.mail
+  # cloudflare_dns_api_token: CF_DNS_TOKEN
 ```
 
 ### Thanks
