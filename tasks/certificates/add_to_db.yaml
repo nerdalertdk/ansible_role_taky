@@ -1,0 +1,37 @@
+---
+- name: CERT (db) | Setting facts
+  ansible.builtin.set_fact:
+    cert_name: "{{ certificate_name | default(inventory_hostname) }}"
+
+- name: "CERT (db) | Check if certificate exists"
+  ansible.builtin.stat:
+    path: "{{ taky_path_root }}/ssl/{{ cert_name }}.p12"
+  register: db_cert_exists
+
+- name: CERT (db) | Certificate exists add it to cert-db.txt
+  when: db_cert_exists.stat.path is defined
+  block:
+    - name: CERT (db) | Get information from certificate
+      community.crypto.x509_certificate_info:
+        path: "{{ taky_path_root }}/ssl/{{ cert_name }}.crt"
+      register: cert_information
+
+    # - name: CERT (db) | Dump information
+    #   ansible.builtin.debug:
+    #     msg: |
+    #       "{{ cert_information.subject.commonName }}"
+    #       "{{ (cert_information.not_before | to_datetime('%Y%m%d%H%M%S%fZ')).strftime('%Y-%m-%dT%H:%M:%S') }}"
+    #       "{{ (cert_information.not_after | to_datetime('%Y%m%d%H%M%S%fZ')).strftime('%Y-%m-%dT%H:%M:%S') }}"
+
+    - name: CERT (db) | add certificate to cert-db.txt
+      ansible.builtin.lineinfile:
+        path: "{{ taky_path_root }}/ssl/cert-db.txt"
+        owner: "{{ taky_user }}"
+        group: "{{ taky_user }}"
+        create: true
+        regexp: "^{{ cert_information.serial_number }}"
+        line: >-
+          V {{ (cert_information.not_before | to_datetime('%Y%m%d%H%M%S%fZ')).strftime('%Y-%m-%dT%H:%M:%S') }}
+          {{ (cert_information.not_after | to_datetime('%Y%m%d%H%M%S%fZ')).strftime('%Y-%m-%dT%H:%M:%S') }}
+          {{ cert_information.serial_number }}
+          {{ cert_information.subject.commonName }}

@@ -1,0 +1,29 @@
+---
+- name: "INSTANCE | Create folders needed for instance {{ inventory_hostname_short }}"
+  ansible.builtin.file:
+    path: '{{ item }}'
+    state: directory
+    recurse: true
+    owner: "{{ taky_user }}"
+    group: "{{ taky_user }}"
+  loop:
+    - "{{ taky_path_instances }}"
+    - "{{ taky_path_instances }}/var/upload"
+    - "/var/log/cot/{{ inventory_hostname_short }}"
+
+- name: "INSTANCE | Create templates need for {{ inventory_hostname_short }}"
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "{{ taky_path_instances }}/{{ item }}"
+    owner: "{{ taky_user }}"
+    group: "{{ taky_user }}"
+  loop:
+    - taky.conf
+
+- name: "INSTANCE | Certificates {{ inventory_hostname_short }}"
+  ansible.builtin.include_tasks: "certificates/main.yaml"
+
+# - name: "INSTANCE | Docker {{ inventory_hostname_short }}"
+#  ansible.builtin.include_tasks: "instances/docker.yaml"
+#  vars:
+#    taky_server_state: "absent"

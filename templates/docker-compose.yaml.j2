@@ -1,0 +1,36 @@
+# {{ ansible_managed }}
+---
+version: "3.9"
+services:
+  {{ ansible_role_name }}-cot-{{ inventory_hostname_short }}:
+    image: taky:{{ taky_server_version }}
+    container_name: {{ ansible_role_name }}-cot-{{ inventory_hostname_short }}
+    hostname: {{ ansible_role_name }}-cot-{{ inventory_hostname_short }}
+    restart: unless-stopped
+    init: true
+    user: {{ taky_user }}
+    ports:
+      - "0.0.0.0:{{ taky_server_port }}:{{ taky_server_port }}"
+    volumes:
+      - "/etc/timezone:/etc/timezone:ro"
+      - "{{ taky_path_instances }}:/etc/taky"
+      - "{{ taky_path_instances }}/var:/var/taky"
+      - "{{ taky_path_root }}/ssl:/etc/taky/ssl"
+      - "/var/log/cot/{{ inventory_hostname_short }}:/var/log/cot"
+    command: taky -c /etc/taky/taky.conf -d -l debug
+
+  {{ ansible_role_name }}-dps-{{ inventory_hostname_short }}:
+    image: taky:{{ taky_server_version }}
+    container_name: {{ ansible_role_name }}-dps-{{ inventory_hostname_short }}
+    hostname: {{ ansible_role_name }}-dps-{{ inventory_hostname_short }}
+    restart: unless-stopped
+    init: true
+    user: {{ taky_user }}
+    ports:
+      - "0.0.0.0:{{ '8443:8443' if taky_enabled_ssl else '8080:8080' }}"
+    volumes:
+      - "/etc/timezone:/etc/timezone:ro"
+      - "{{ taky_path_instances }}:/etc/taky"
+      - "{{ taky_path_instances }}/var:/var/taky"
+      - "{{ taky_path_root }}/ssl:/etc/taky/ssl"
+    command: taky_dps -c /etc/taky/taky.conf -l debug

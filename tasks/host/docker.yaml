@@ -1,0 +1,32 @@
+---
+- name: "HOST (docker) | Create Dockerfile file"
+  ansible.builtin.copy:
+    src: "Dockerfile"
+    dest: "{{ taky_path_root }}/data/Dockerfile"
+    owner: "{{ taky_user }}"
+    group: "{{ taky_user }}"
+
+- name: "HOST (docker) | Build taky docker image"
+  community.docker.docker_image:
+    name: taky
+    tag: "{{ taky_server_version }}"
+    source: build
+    # force_source: true
+    build:
+      path: "{{ taky_path_root }}/data"
+      target: runtime
+      args:
+        TAKY_VERSION: "{{ taky_server_version }}"
+        USER: "{{ taky_user }}"
+        USER_ID: "{{ taky_user_id | default(1000) }}"
+        GROUP_ID: "{{ taky_group_id | default(1000) }}"
+      cache_from:
+        - python:3.12
+        - python:3.12-slim
+
+- name: "HOST (docker) | Docker Prune builder cache"
+  community.docker.docker_prune:
+    builder_cache: true
+    images: true
+    images_filters:
+      dangling: true

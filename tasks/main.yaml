@@ -1,0 +1,7 @@
+- name: Setup Host
+  ansible.builtin.include_tasks: "host/main.yaml"
+  when: inventory_hostname in groups["taky_host"]
+
+- name: "Setup Instance '{{ inventory_hostname_short }}'"
+  ansible.builtin.include_tasks: "instances/main.yaml"
+  when: inventory_hostname in groups["taky_servers"]

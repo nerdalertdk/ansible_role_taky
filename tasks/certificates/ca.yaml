@@ -1,0 +1,64 @@
+---
+- name: CERT (ca) | Setting facts
+  ansible.builtin.set_fact:
+    cert_name: "ca"
+
+- name: CERT (ca) | Check if the CA cert is generated
+  ansible.builtin.stat:
+    path: "{{ taky_path_root }}/ssl/{{ cert_name }}.p12"
+  register: cert_exists
+
+- name: "CERT (ca) | Creating CA certificate {{ cert_name }}"
+  when: cert_exists.stat.path is not defined
+  block:
+    - name: CERT (ca) | Create private key (RSA, 4096 bits)
+      community.crypto.openssl_privatekey:
+        path: "{{ taky_path_root }}/ssl/{{ cert_name }}.key"
+        owner: "{{ taky_user }}"
+        group: "{{ taky_user }}"
+
+    - name: CERT (ca) | Create certificate signing request (CSR) for CA certificate
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: "{{ taky_path_root }}/ssl/{{ cert_name }}.key"
+        common_name: "{{ cert_name }}"
+        use_common_name_for_san: false # since we do not specify SANs, don't use CN as a SAN
+        basic_constraints:
+          - "CA:TRUE"
+        basic_constraints_critical: true
+        key_usage:
+          - Digital Signature
+          - Certificate Sign
+          - CRL Sign
+        key_usage_critical: true
+        extended_key_usage:
+          - clientAuth
+          - serverAuth
+        extended_key_usage_critical: false
+      register: csr_pipe
+
+    - name: CERT (ca) | Create self-signed CA certificate from CSR
+      community.crypto.x509_certificate:
+        path: "{{ taky_path_root }}/ssl/{{ cert_name }}.crt"
+        csr_content: "{{ csr_pipe.csr }}"
+        privatekey_path: "{{ taky_path_root }}/ssl/{{ cert_name }}.key"
+        provider: selfsigned
+        selfsigned_not_after: +825d # On macOS 10.15 and onwards, TLS server certificates must have a validity period of 825 days or fewer
+        selfsigned_not_before: -1d
+        owner: "{{ taky_user }}"
+        group: "{{ taky_user }}"
+
+    - name: CERT (ca) | Create CA PKCS#12 file
+      community.crypto.openssl_pkcs12:
+        action: export
+        friendly_name: "{{ inventory_hostname }}"
+        passphrase: "{{ taky_certificate_p12_pw }}"
+        path: "{{ taky_path_root }}/ssl/{{ cert_name }}.p12"
+        certificate_path: "{{ taky_path_root }}/ssl/{{ cert_name }}.crt"
+        privatekey_path: "{{ taky_path_root }}/ssl/{{ cert_name }}.key"
+        owner: "{{ taky_user }}"
+        group: "{{ taky_user }}"
+
+    - name: CERT (ca) | Add CA cert to Taky CertificateDatabase
+      ansible.builtin.include_tasks: add_to_db.yaml
+      vars:
+        certificate_name: "{{ cert_name }}"

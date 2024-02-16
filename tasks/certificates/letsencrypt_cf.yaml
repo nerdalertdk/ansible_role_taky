@@ -1,0 +1,98 @@
+---
+- name: CERT (letsencrypt -> vars) | Setting facts
+  ansible.builtin.set_fact:
+    acme_directory: "{{ secret.acme_directory | default('https://acme-staging-v02.api.letsencrypt.org/directory') }}"
+    acme_certificate_caurl: https://letsencrypt.org/certs/isrgrootx1.pem.txt
+    acme_certificate_domain: "{{ secret.acme_certificate_domain | default(ansible_fqdn) }}"
+    acme_challenge_ttl: 1
+    acme_challenge_wait: 60 # Seconds
+
+- name: CERT (letsencrypt -> account) | Create account key (RSA, 4096 bits)
+  community.crypto.openssl_privatekey:
+    path: "{{ taky_path_root | default('/opt') }}/{{ ansible_role_name }}/ssl/letsencrypt-account.key"
+    owner: "{{ taky_user }}"
+    group: "{{ taky_user }}"
+
+- name: CERT (letsencrypt -> account) | Make sure account exists and has given contacts. We agree to TOS.
+  community.crypto.acme_account:
+    account_key_src: "{{ taky_path_root | default('/opt') }}/{{ ansible_role_name }}/ssl/letsencrypt-account.key"
+    state: present
+    terms_agreed: true
+    contact: "{{ secret.acme.contact }}"
+    acme_version: 2
+    acme_directory: "{{ acme_directory }}"
+
+- name: "CERT (letsencrypt) | Create private key (RSA, 4096 bits) for *.{{ acme_certificate_domain }}"
+  community.crypto.openssl_privatekey:
+    path: "{{ taky_path_root | default('/opt') }}/{{ ansible_role_name }}/ssl/{{ acme_certificate_domain }}.key"
+    owner: "{{ taky_user }}"
+    group: "{{ taky_user }}"
+
+- name: "CERT (letsencrypt) | Create (CSR) for new certificate - *.{{ acme_certificate_domain }}"
+  community.crypto.openssl_csr:
+    privatekey_path: "{{ taky_path_root | default('/opt') }}/{{ ansible_role_name }}/ssl/{{ acme_certificate_domain }}.key"
+    path: "{{ taky_path_root | default('/opt') }}/{{ ansible_role_name }}/ssl/{{ acme_certificate_domain }}.csr"
+    common_name: "*.{{ acme_certificate_domain }}"
+    subject_alt_name:
+      - "DNS:{{ acme_certificate_domain }}"
+    owner: "{{ taky_user }}"
+    group: "{{ taky_user }}"
+
+- name: "CERT (letsencrypt) | Create a challenge *.{{ acme_certificate_domain }}"
+  community.crypto.acme_certificate:
+    acme_version: 2
+    acme_directory: "{{ acme_directory }}"
+    challenge: dns-01
+    account_key_src: "{{ taky_path_root | default('/opt') }}/{{ ansible_role_name }}/ssl/letsencrypt-account.key"
+    csr: "{{ taky_path_root | default('/opt') }}/{{ ansible_role_name }}/ssl/{{ acme_certificate_domain }}.csr"
+    dest: "{{ taky_path_root | default('/opt') }}/{{ ansible_role_name }}/ssl/{{ acme_certificate_domain }}.crt"
+    fullchain_dest: "{{ taky_path_root | default('/opt') }}/{{ ansible_role_name }}/ssl/{{ acme_certificate_domain }}.chain.crt"
+    remaining_days: 10
+  register: acme_certificate_challenge
+
+- name: CERT (letsencrypt) | Validate acme certificate
+  when: acme_certificate_challenge is changed # noqa: no-handler
+  block:
+    - name: CERT (letsencrypt -> cloudflare) | Create cloudflare dns challenge record
+      community.general.cloudflare_dns:
+        zone: "{{ acme_certificate_domain | community.dns.get_registrable_domain }}"
+        type: TXT
+        state: present
+        record: "{{ acme_certificate_challenge.challenge_data['*.' + acme_certificate_domain]['dns-01']['resource'] }}.{{ acme_certificate_domain }}"
+        value: "{{ acme_certificate_challenge.challenge_data['*.' + acme_certificate_domain]['dns-01']['resource_value'] }}"
+        ttl: "{{ acme_challenge_ttl }}"
+        api_token: "{{ secret.cloudflare.api_token }}"
+
+    - name: CERT (letsencrypt) | Wait for txt record replication
+      ansible.builtin.pause:
+        seconds: "{{ acme_challenge_wait }}"
+
+    - name: CERT (letsencrypt) | Validate challenge
+      community.crypto.acme_certificate:
+        acme_version: 2
+        acme_directory: "{{ acme_directory }}"
+        challenge: dns-01
+        account_key_src: "{{ taky_path_root | default('/opt') }}/{{ ansible_role_name }}/ssl/letsencrypt-account.key"
+        csr: "{{ taky_path_root | default('/opt') }}/{{ ansible_role_name }}/ssl/{{ acme_certificate_domain }}.csr"
+        dest: "{{ taky_path_root | default('/opt') }}/{{ ansible_role_name }}/ssl/{{ acme_certificate_domain }}.crt"
+        fullchain_dest: "{{ taky_path_root | default('/opt') }}/{{ ansible_role_name }}/ssl/{{ acme_certificate_domain }}.chain.crt"
+        data: "{{ acme_certificate_challenge }}"
+      delay: "{{ acme_challenge_ttl }}"
+
+  always:
+    - name: CERT (letsencrypt -> cloudflare) | Delete cloudflare dns challenge record
+      community.general.cloudflare_dns:
+        zone: "{{ acme_certificate_domain | community.dns.get_registrable_domain }}"
+        type: TXT
+        state: absent
+        record: "{{ acme_certificate_challenge.challenge_data['*.' + acme_certificate_domain]['dns-01']['resource'] }}.{{ acme_certificate_domain }}"
+        value: "{{ acme_certificate_challenge.challenge_data['*.' + acme_certificate_domain]['dns-01']['resource_value'] }}"
+        ttl: "{{ acme_challenge_ttl }}"
+        api_token: "{{ secret.cloudflare.api_token }}"
+
+- name: CERT (letsencrypt) | Retrieve acme root ca file
+  ansible.builtin.get_url:
+    url: "{{ acme_certificate_caurl }}"
+    dest: "{{ taky_path_root | default('/opt') }}/{{ ansible_role_name }}/ssl/{{ acme_certificate_caurl | urlsplit('path') | basename | splitext | first }}"
+    owner: "{{ taky_user }}"
+    group: "{{ taky_user }}"

@@ -1,0 +1,35 @@
+- name: "HOST | Creating taky user group"
+  ansible.builtin.group:
+    name: "{{ taky_user }}"
+    system: true
+
+- name: "HOST | Creating taky user"
+  ansible.builtin.user:
+    name: "{{ taky_user }}"
+    group: "{{ taky_user }}"
+    system: true
+  register: user_output
+
+- name: "HOST | Create folders needed for {{ ansible_role_name }}"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    recurse: true
+    owner: "{{ taky_user }}"
+    group: "{{ taky_user }}"
+  loop:
+    - "{{ taky_path_root }}/ssl"
+    - "{{ taky_path_root }}/data"
+    # - "{{ taky_path_root }}/instances"
+
+# - name: "HOST | certificate (letsencrypt)"
+#   ansible.builtin.include_tasks: "certificates/letsencrypt.yaml"
+
+- name: "HOST | certificate (CA / Server)"
+  ansible.builtin.include_tasks: "certificates/main.yaml"
+
+- name: "HOST | Build Docker image"
+  ansible.builtin.include_tasks: "host/docker.yaml"
+  vars:
+    taky_group_id: "{{ user_output.group }}"
+    taky_user_id: "{{ user_output.uid }}"

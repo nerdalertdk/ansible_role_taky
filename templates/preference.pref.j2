@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<preferences>
+  <preference version="1" name="cot_streams">
+    <entry key="count" class="class java.lang.Integer">1</entry>
+    <entry key="enabled0" class="class java.lang.Boolean">false</entry>
+    <entry key="description0" class="class java.lang.String">{{ taky_team_name | capitalize }} Team - {{ taky_org_name | capitalize }}</entry>
+    <entry key="connectString0" class="class java.lang.String">{{ inventory_hostname_short }}.{{ taky_org_url }}:{{ taky_server_port_cot }}:{{ 'ssl' if taky_enabled_ssl else 'tcp' }}</entry>
+  </preference>
+  <preference version="1" name="com.atakmap.app_preferences">
+    <entry key="displayServerConnectionWidget" class="class java.lang.Boolean">true</entry>
+    <entry key="caPassword" class="class java.lang.String">{{ taky_certificate_p12_pw }}</entry>
+    <entry key="clientPassword" class="class java.lang.String">{{ taky_certificate_p12_pw }}</entry>
+{% if "itak" in (pref_app | default('atak')) %}
+    <entry key="caLocation" class="class java.lang.String">content/server.p12</entry>
+    <entry key="certificateLocation" class="class java.lang.String">content/{{ inventory_hostname_short }}team.p12</entry>
+{% else %}
+    <entry key="caLocation" class="class java.lang.String">cert/server.p12</entry>
+    <entry key="certificateLocation" class="class java.lang.String">cert/{{ inventory_hostname_short }}team.p12</entry>
+{% endif %}
+    <entry key="locationTeam" class="class java.lang.String">{{ inventory_hostname_short | capitalize }}</entry>
+{% if "yellow" in inventory_hostname_short %}
+    <entry key="atakRoleType" class="class java.lang.String">HQ</entry>
+{% else %}
+    <entry key="atakRoleType" class="class java.lang.String">Team Member</entry>
+{% endif %}
+  </preference>
+</preferences>

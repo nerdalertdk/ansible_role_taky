@@ -1,0 +1,16 @@
+---
+- name: CERT (host) | Generate CA cert
+  ansible.builtin.include_tasks: ca.yaml
+  when: inventory_hostname in groups["taky_host"]
+
+- name: CERT (host) | Generate host certificate
+  ansible.builtin.include_tasks: create.yaml
+  vars:
+    cert_name: "server"
+  when: inventory_hostname in groups["taky_host"]
+
+- name: CERT (instance) | Generate instance certificate
+  ansible.builtin.include_tasks: create.yaml
+  vars:
+    cert_name: "{{ inventory_hostname_short }}"
+  when: inventory_hostname in groups["taky_servers"]

@@ -1,0 +1,16 @@
+#jinja2: trim_blocks:False
+<MissionPackageManifest version="2">
+  <Configuration>
+    <Parameter name="uid" value="{{ ansible_fqdn | ansible.builtin.to_uuid }}"/>
+    <Parameter name="name" value="{{ taky_org_name }} ATAK Settings"/>
+    <Parameter name="onReceiveDelete" value="false"/>
+  </Configuration>
+  <Contents>
+{%- for host in groups['takt_servers'] %}
+    <Content ignore="false" zipEntry="content/{{ hostvars[host].inventory_hostname_short }}team.pref"/>
+    <Content ignore="false" zipEntry="content/{{ hostvars[host].inventory_hostname_short }}team.p12"/>
+{%- endfor %}
+    <Content ignore="false" zipEntry="content/server.p12"/>
+    <Content ignore="false" zipEntry="content/tak-defaults.pref"/>
+  </Contents>
+</MissionPackageManifest>

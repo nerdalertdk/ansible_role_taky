@@ -1,0 +1,58 @@
+[taky]
+# System hostname
+hostname = {{ inventory_hostname_short }}
+
+# The TAK Server nodeId
+node_id = TAKY-{{ inventory_hostname_short }}
+
+# The IP to bind to. Defaults to 0.0.0.0. To use IPv6, set to "::"
+bind_ip = 0.0.0.0
+
+# The server's public IP address
+public_ip = {{ inventory_hostname }}
+
+# redis = redis://default:{{ taky_server_redis_pass }}@redis:6379/0
+
+root_dir = /var/taky
+
+[cot_server]
+# If left blank, taky will listen on 8087 without SSL, or 8089 with SSL
+port = {{ taky_server_port_cot }}
+
+mon_ip = 127.0.0.1
+mon_port = 1337
+
+#Enable/disable logging of COT files
+cot_log = {{ taky_server_log_cot }}
+# Where to store a log of .cot messages from the client for debug purposes
+log_cot = /var/log/cot/
+max_persist_ttl = -1
+
+[dp_server]
+# Where user datapackage uploads are stored.
+upload_path = /var/taky/upload
+
+[ssl]
+# SSL is disabled by default. Set enabled to "true" to enable
+enabled = {{ taky_server_ssl }}
+
+# Should taky require clients to have a certificate?
+client_cert_required = {{ taky_server_require_client_cert }}
+
+# The server certificate or certificate+keyfile
+cert = /etc/taky/ssl/server.crt
+cert_db = /etc/taky/ssl/cert-db.txt
+
+# Specify the SSL key path
+key = /etc/taky/ssl/server.key
+
+# Specify the SSL key password (if required)
+key_pw {{ taky_certificate_key_pw | default('') }}
+
+# Specify an explicit CA certificate
+# If left blank, will use system CA certificates
+ca = /etc/taky/ssl/ca.crt
+ca_key = /etc/taky/ssl/ca.key
+
+server_p12 = /etc/taky/ssl/server.p12
+server_p12_pw = {{ taky_certificate_p12_pw }}

@@ -1,0 +1,9 @@
+.cache/
+.DS_Store
+.env
+.private_key_file
+.temp/
+.vault-password
+.venv_azure/
+galaxy_roles/
+vars/vault.yaml

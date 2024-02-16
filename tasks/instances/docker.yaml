@@ -1,0 +1,13 @@
+---
+- name: "INSTANCE | Create templates need for {{ inventory_hostname_short }}"
+  ansible.builtin.template:
+    src: "docker-compose.yaml.j2"
+    dest: "{{ taky_path_root }}/{{ item }}"
+    owner: "{{ taky_user }}"
+    group: "{{ taky_user }}"
+
+- name: Run `docker-compose up`
+  community.docker.docker_compose:
+    state: "{{ taky_server_state | default('present') }}"
+    project_src: "{{ taky_path_root }}"
+    remove_orphans: true
