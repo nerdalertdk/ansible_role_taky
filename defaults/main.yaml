@@ -3,12 +3,12 @@ taky_path_root: "/opt/{{ ansible_role_name }}"
 taky_path_instances: "{{ taky_path_root }}/instances/{{ inventory_hostname_short }}"
 taky_user: taky
 
-taky_certificate_key_pw:
-taky_certificate_p12_pw: atakatak
+taky_certificate_key_pw: "{{ secret.taky_certificate_key_pw | default('') }}"
+taky_certificate_p12_pw: "{{ secret.taky_certificate_p12_pw | default('atakatak') }}"
 
 taky_server_version: 0.9
 taky_server_require_client_cert: true
-taky_server_redis_pass: "{{ secret.taky.redis_pass | default('') }}"
+taky_server_redis_pass: "{{ secret.taky_server_redis_pass | default('') }}"
 taky_server_ssl: true
 taky_server_port_cot: "{{ 8089 if taky_server_ssl else 8087 }}"
 taky_server_port_dps: "{{ 8443 if taky_server_ssl else 8080 }}"

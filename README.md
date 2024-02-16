@@ -32,6 +32,20 @@ taky_servers:
       ansible_host: taky.server.io
 ```
 
+Create an `vars/vault.yaml` file to store / overwrite secrets
+```yaml
+    secret:
+        acme_directory: https://acme-staging-v02.api.letsencrypt.org/directory
+        acme_certificate_domain: "{{ ansible_fqdn }}"
+        acme_contact: Change@me.mail
+
+        cloudflare_dns_api_token: CF_DNS_TOKEN
+
+        taky_certificate_key_pw: 
+        taky_certificate_p12_pw: atakatak
+        taky_server_redis_pass: 
+```
+
 ### Thanks
   - [tkuester](https://github.com/tkuester/taky) for creating Taky
   - [skadakar](https://github.com/skadakar) For inspiration
